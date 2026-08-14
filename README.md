@@ -33,6 +33,10 @@ El sistema permite:
 🗄️ **Base de datos Notion:**  
 [Ver base de datos](https://app.notion.com/p/InmoLead-IA-ffcf8312289a4283b7ef4447a621c65a?source=copy_link)
 
+📹 **Video Final:**  
+[Ver video](https://drive.google.com/file/d/1wq1OMTnl4to2kUCQMvKepib1QapvHt7b/view?usp=sharing)
+
+
 
 ## 🛠️ Tecnologías
 
