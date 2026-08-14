@@ -1,0 +1,233 @@
+{
+  "name": "InmoLead IA - Error Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "_*RAMA 3 - ERROR HANDELR*_\n\n",
+        "height": 96,
+        "width": 656
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        16
+      ],
+      "id": "03af8e01-835c-4b4f-92e5-3f36c677b680",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        64,
+        160
+      ],
+      "id": "670f02e1-6c82-49b2-a4b2-634e3dfdb14e",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\n// =====================================================\n// BUSCAR TELEGRAM CHAT ID EN TODO EL PAYLOAD\n// =====================================================\n\nfunction buscarChatId(valor, visitados = new Set()) {\n\n  if (valor === null || valor === undefined) {\n    return '';\n  }\n\n  // Si llega como string JSON, intentar parsearlo\n  if (typeof valor === 'string') {\n\n    const texto = valor.trim();\n\n    // Buscar directamente dentro del string\n    const match = texto.match(\n      /\"(?:telegram_chat_id|telegramChatId|chat_id)\"\\s*:\\s*\"?(.*?)\"?(?:,|})/i\n    );\n\n    if (match?.[1]) {\n      return String(match[1])\n        .replace(/\"$/, '')\n        .trim();\n    }\n\n    if (\n      (texto.startsWith('{') && texto.endsWith('}')) ||\n      (texto.startsWith('[') && texto.endsWith(']'))\n    ) {\n      try {\n        const parsed = JSON.parse(texto);\n        return buscarChatId(parsed, visitados);\n      } catch {\n        return '';\n      }\n    }\n\n    return '';\n  }\n\n  if (typeof valor !== 'object') {\n    return '';\n  }\n\n  if (visitados.has(valor)) {\n    return '';\n  }\n\n  visitados.add(valor);\n\n  // Primero buscar las claves conocidas\n  const clavesChat = [\n    'telegram_chat_id',\n    'telegramChatId',\n    'chat_id'\n  ];\n\n  for (const clave of clavesChat) {\n    if (\n      valor[clave] !== undefined &&\n      valor[clave] !== null &&\n      String(valor[clave]).trim() !== ''\n    ) {\n      return String(valor[clave]).trim();\n    }\n  }\n\n  // Después recorrer todo el objeto\n  for (const clave of Object.keys(valor)) {\n\n    const encontrado =\n      buscarChatId(valor[clave], visitados);\n\n    if (encontrado) {\n      return encontrado;\n    }\n  }\n\n  return '';\n}\n\n\n// =====================================================\n// DATOS DEL ERROR\n// =====================================================\n\nconst execution =\n  data.execution ?? {};\n\nconst workflow =\n  data.workflow ?? {};\n\nconst error =\n  execution.error ??\n  data.error ??\n  {};\n\n\n// =====================================================\n// DATOS GENERALES\n// =====================================================\n\nconst workflowName =\n  workflow.name ??\n  'InmoLead IA';\n\nconst nodoError =\n  execution.lastNodeExecuted ??\n  error.node?.name ??\n  error.nodeName ??\n  error.node ??\n  'Nodo desconocido';\n\nconst mensajeError =\n  error.message ??\n  error.description ??\n  execution.error?.message ??\n  'Error no identificado en la ejecución del workflow.';\n\nconst tipoTecnico =\n  error.name ??\n  error.type ??\n  'Error de ejecución';\n\nconst executionId =\n  execution.id ??\n  null;\n\nconst executionUrl =\n  execution.url ??\n  null;\n\n\n// =====================================================\n// CHAT ID\n// =====================================================\n\nconst telegramChatId =\n  buscarChatId(data);\n\n\n// =====================================================\n// CLASIFICACIÓN\n// =====================================================\n\nlet tipo = 'Desconocido';\n\nconst texto =\n  `${nodoError} ${mensajeError}`.toLowerCase();\n\nif (texto.includes('notion')) {\n\n  tipo = 'Notion';\n\n} else if (texto.includes('telegram')) {\n\n  tipo = 'Telegram';\n\n} else if (texto.includes('slack')) {\n\n  tipo = 'Slack';\n\n} else if (\n  texto.includes('gemini') ||\n  texto.includes('google generative') ||\n  texto.includes('language model')\n) {\n\n  tipo = 'Gemini';\n\n} else if (\n  texto.includes('parse') ||\n  texto.includes('json')\n) {\n\n  tipo = 'Parsing';\n\n} else if (\n  texto.includes('validation') ||\n  texto.includes('validación')\n) {\n\n  tipo = 'Validación';\n\n} else if (\n  texto.includes('api') ||\n  texto.includes('http') ||\n  texto.includes('request')\n) {\n\n  tipo = 'Integración';\n}\n\n\n// =====================================================\n// SALIDA\n// =====================================================\n\nreturn [\n  {\n    json: {\n\n      workflow:\n        workflowName,\n\n      nodo:\n        String(nodoError),\n\n      mensaje:\n        String(mensajeError),\n\n      tipo_tecnico:\n        String(tipoTecnico),\n\n      tipo,\n\n      telegram_chat_id:\n        telegramChatId,\n\n      tiene_telegram_chat_id:\n        Boolean(telegramChatId),\n\n      execution_id:\n        executionId\n          ? String(executionId)\n          : '',\n\n      execution_url:\n        executionUrl ?? '',\n\n      fecha:\n        new Date().toISOString(),\n\n      reintentos:\n        0,\n\n      resuelto:\n        false,\n\n      observaciones:\n        'Error capturado automáticamente por el Error Handler global.'\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        160
+      ],
+      "id": "c8f84a7a-c5d6-4839-9a75-27957077305c",
+      "name": "Preparar error global"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "dataSourceId": {
+          "__rl": true,
+          "value": "d2f8f1fd-1dfe-48e5-bdc9-c9827b8b6d44",
+          "mode": "list",
+          "cachedResultName": "Errores - InmoLead IA",
+          "cachedResultUrl": "https://app.notion.com/p/eba145ef70914007a77227ca4074c482"
+        },
+        "title": "={{ 'ERR-GLOBAL-' + Date.now() }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Error|title",
+              "title": "={{ 'ERR-GLOBAL-' + Date.now() }}"
+            },
+            {
+              "key": "Workflow|rich_text",
+              "textContent": "={{ $json.workflow }}"
+            },
+            {
+              "key": "Nodo|rich_text",
+              "textContent": "={{ $json.nodo }}"
+            },
+            {
+              "key": "Mensaje|rich_text",
+              "textContent": "={{ $json.mensaje }}"
+            },
+            {
+              "key": "Tipo|select",
+              "selectValue": "={{ $json.tipo }}"
+            },
+            {
+              "key": "Telegram Chat ID|rich_text",
+              "textContent": "={{ $json.telegram_chat_id }}"
+            },
+            {
+              "key": "Fecha|date",
+              "date": "={{ $json.fecha }}"
+            },
+            {
+              "key": "Reintentos|number",
+              "numberValue": "={{ $json.reintentos }}"
+            },
+            {
+              "key": "Resuelto|checkbox",
+              "checkboxValue": "={{ $json.resuelto }}"
+            },
+            {
+              "key": "Observaciones|rich_text",
+              "textContent": "={{\n  $json.observaciones +\n  '\\nTipo técnico: ' + $json.tipo_tecnico +\n  ($json.execution_id\n    ? '\\nExecution ID: ' + $json.execution_id\n    : '') +\n  ($json.execution_url\n    ? '\\nExecution URL: ' + $json.execution_url\n    : '')\n}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        480,
+        160
+      ],
+      "id": "c8451862-76ce-46c8-b6bd-8863b4a665ba",
+      "name": "Create a database page",
+      "credentials": {
+        "notionApi": {
+          "id": "4jZspmXwNAvcXlFt",
+          "name": "Notion"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6371a3cd-0287-420a-a0fe-5497f2c7df8f",
+              "leftValue": "={{ $('Preparar error global').first().json.tiene_telegram_chat_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        160
+      ],
+      "id": "ebcaef54-8a3c-4317-a4cb-2312820151bf",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Preparar error global').item.json.telegram_chat_id }}",
+        "text": "={{ $('Preparar error global').item.json.mensaje }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        896,
+        32
+      ],
+      "id": "9e5e04ed-a732-4694-9d73-a8e09dcb09af",
+      "name": "Enviar aviso de error",
+      "webhookId": "396f5216-ff9f-464e-a9ec-cbdf45d1021c",
+      "credentials": {
+        "telegramApi": {
+          "id": "uXQNMMEsi7kpUDOI",
+          "name": "Telegram"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Preparar error global",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar error global": {
+      "main": [
+        [
+          {
+            "node": "Create a database page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a database page": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Enviar aviso de error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "37efc36c-43ff-4adb-916c-7d98edf90ea9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2291a545480afdfb0fd4c3db1ae15bfc276a47a1caa6be75b8850c170ca12ea4"
+  },
+  "nodeGroups": [],
+  "id": "IDFfkvJUEEyj40p0",
+  "tags": []
+}
